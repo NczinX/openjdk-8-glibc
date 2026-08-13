@@ -30,7 +30,7 @@ jobs:
           chmod +x scripts/make-repo.sh
 
       - name: Buildar o .deb (openjdk-8-glibc)
-        run: ./build.sh
+        run: bash build.sh
         env:
           CI: "true"
 
@@ -38,7 +38,7 @@ jobs:
         run: |
           DEB_FILE=$(ls openjdk-8-glibc_*_aarch64.deb | head -n1)
           echo "Pacote gerado: $DEB_FILE"
-          ./scripts/make-repo.sh "$DEB_FILE"
+          bash scripts/make-repo.sh "$DEB_FILE"
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 

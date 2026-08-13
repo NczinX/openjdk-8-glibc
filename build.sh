@@ -251,7 +251,9 @@ done < <(find "$JAVA_DIR/bin" -maxdepth 1 -type f -executable -print0)
 
 echo "[+] Todos os interpreters estão corretos."
 
-echo "[+] Criando wrappers..."
+echo "[+] Criando wrappers (não vão para /usr/bin diretamente — serão"
+echo "    registrados via update-alternatives no postinst, para não"
+echo "    conflitar com os symlinks do openjdk-21/17)..."
 
 create_wrapper() {
     local name="$1"
@@ -335,7 +337,7 @@ Description: $PKG_DESCRIPTION
  Eclipse Temurin OpenJDK 8 running through the Termux glibc environment.
 EOF
 
-echo "[+] Gerando comando update-alternatives..."
+echo "[+] Gerando comando update-alternatives (mesmo padrão do openjdk-21)..."
 
 ALT_SLAVES=""
 for n in "${SLAVE_NAMES[@]}"; do
