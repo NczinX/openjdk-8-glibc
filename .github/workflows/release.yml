@@ -19,10 +19,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache de pacotes apt
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-cache-${{ runner.os }}-patchelf-dpkgdev
+
       - name: Instalar dependências de build
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y patchelf dpkg-dev
+          MISSING=""
+          for pkg in patchelf dpkg-dev; do
+            if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+              MISSING="$MISSING $pkg"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y $MISSING
+          else
+            echo "Dependências já instaladas, pulando."
+          fi
+
+      - name: Cache do tarball do Temurin 8
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: temurin8-tarball-${{ runner.os }}
+          restore-keys: |
+            temurin8-tarball-
 
       - name: Dar permissão de execução aos scripts
         run: |
@@ -34,6 +58,13 @@ jobs:
         env:
           CI: "true"
 
+      - name: Publicar o .deb no GitHub Releases (hospedagem)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apt-pool
+          name: Pacotes (hospedagem apt)
+          files: openjdk-8-glibc_*_aarch64.deb
+
       - name: Montar o repositório apt (pool + dists)
         run: |
           DEB_FILE=$(ls openjdk-8-glibc_*_aarch64.deb | head -n1)
@@ -42,6 +73,7 @@ jobs:
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          DEB_REDIRECT_BASE_URL: https://github.com/${{ github.repository }}/releases/download/apt-pool
 
       - name: Publicar no Cloudflare Pages
         uses: cloudflare/pages-action@v1
