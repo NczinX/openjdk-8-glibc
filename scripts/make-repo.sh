@@ -117,11 +117,16 @@ if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
         exit 1
     fi
 
-    gpg --batch --yes --local-user "$KEY_ID" \
+    echo "allow-loopback-pinentry" > "$GNUPGHOME/gpg-agent.conf"
+    gpgconf --kill gpg-agent 2>/dev/null || true
+
+    gpg --batch --yes --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE:-}" \
+        --local-user "$KEY_ID" \
         --detach-sign --armor \
         -o "$DIST_DIR/Release.gpg" "$DIST_DIR/Release"
 
-    gpg --batch --yes --local-user "$KEY_ID" \
+    gpg --batch --yes --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE:-}" \
+        --local-user "$KEY_ID" \
         --clearsign \
         -o "$DIST_DIR/InRelease" "$DIST_DIR/Release"
 
