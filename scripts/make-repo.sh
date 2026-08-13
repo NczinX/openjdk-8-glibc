@@ -13,6 +13,7 @@ COMPONENT="${COMPONENT:-main}"
 ARCH="${ARCH:-aarch64}"
 ORIGIN="${ORIGIN:-openjdk-8-glibc}"
 LABEL="${LABEL:-$ORIGIN}"
+DEB_REDIRECT_BASE_URL="${DEB_REDIRECT_BASE_URL:-}"
 
 POOL_DIR="$OUT_DIR/pool/$COMPONENT"
 DIST_DIR="$OUT_DIR/dists/$DISTRO"
@@ -58,6 +59,26 @@ echo "[+] Gerando Packages..."
 )
 
 gzip -9 -c "$BINARY_DIR/Packages" > "$BINARY_DIR/Packages.gz"
+
+if [ -n "$DEB_REDIRECT_BASE_URL" ]; then
+    echo "[+] Gerando _redirects (Cloudflare Pages) para servir os .deb via redirecionamento..."
+
+    : > "$OUT_DIR/_redirects"
+
+    for deb in "$@"; do
+        deb_basename=$(basename "$deb")
+        pkg_name=$(dpkg-deb -f "$deb" Package)
+        first_letter="${pkg_name:0:1}"
+        pool_path="/pool/$COMPONENT/$first_letter/$pkg_name/$deb_basename"
+        target_url="$DEB_REDIRECT_BASE_URL/$deb_basename"
+
+        echo "$pool_path $target_url 302" >> "$OUT_DIR/_redirects"
+        echo "    - $pool_path -> $target_url"
+    done
+
+    echo "[+] Removendo os .deb do diretório publicado (não são mais necessários aqui)..."
+    rm -rf "$POOL_DIR"
+fi
 
 echo "[+] Gerando Release..."
 
