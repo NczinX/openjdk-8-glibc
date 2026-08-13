@@ -1,0 +1,64 @@
+name: Build e publicar repositório apt
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  # Nome do projeto no Cloudflare Pages (crie o projeto uma vez no dashboard
+  # da Cloudflare antes de usar este workflow — o action só faz deploy nele,
+  # não cria o projeto do zero).
+  CLOUDFLARE_PROJECT_NAME: openjdk-8-glibc
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências de build
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y patchelf dpkg-dev
+
+      - name: Dar permissão de execução aos scripts
+        run: |
+          chmod +x build.sh
+          chmod +x scripts/make-repo.sh
+
+      - name: Buildar o .deb (openjdk-8-glibc)
+        run: ./build.sh
+        env:
+          CI: "true"
+
+      - name: Montar o repositório apt (pool + dists)
+        run: |
+          DEB_FILE=$(ls openjdk-8-glibc_*_aarch64.deb | head -n1)
+          echo "Pacote gerado: $DEB_FILE"
+          ./scripts/make-repo.sh "$DEB_FILE"
+        env:
+          # Se os secrets abaixo existirem, o repositório sai assinado
+          # (InRelease + Release.gpg). Se não existirem, sai sem assinatura
+          # e quem instalar precisa usar [trusted=yes] no sources.list.
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Publicar no Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ env.CLOUDFLARE_PROJECT_NAME }}
+          directory: dist-repo
+
+      - name: Criar GitHub Release com o .deb anexado
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: openjdk-8-glibc_*_aarch64.deb
+          generate_release_notes: true
