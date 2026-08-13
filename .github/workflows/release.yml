@@ -49,6 +49,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: ${{ env.CLOUDFLARE_PROJECT_NAME }}
           directory: dist-repo
+          branch: main
 
       - name: Criar GitHub Release com o .deb anexado
         uses: softprops/action-gh-release@v2
