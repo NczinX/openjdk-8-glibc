@@ -41,6 +41,7 @@ jobs:
           bash scripts/make-repo.sh "$DEB_FILE"
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Publicar no Cloudflare Pages
         uses: cloudflare/pages-action@v1
