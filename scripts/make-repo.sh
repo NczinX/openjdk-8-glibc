@@ -96,9 +96,26 @@ if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
     export GNUPGHOME
     trap 'rm -rf "$GNUPGHOME"' EXIT
 
-    echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+    KEY_FILE="$GNUPGHOME/key.asc"
+    printf '%s\n' "$GPG_PRIVATE_KEY" > "$KEY_FILE"
+
+    if ! grep -q "BEGIN PGP PRIVATE KEY BLOCK" "$KEY_FILE"; then
+        echo "[!] GPG_PRIVATE_KEY não parece uma chave privada ASCII-armored válida."
+        echo "    O conteúdo do secret precisa começar com a linha:"
+        echo "    -----BEGIN PGP PRIVATE KEY BLOCK-----"
+        echo "    e terminar com:"
+        echo "    -----END PGP PRIVATE KEY BLOCK-----"
+        exit 1
+    fi
+
+    gpg --batch --import "$KEY_FILE"
 
     KEY_ID=$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^sec/ {print $5; exit}')
+
+    if [ -z "$KEY_ID" ]; then
+        echo "[!] Nenhuma chave secreta foi importada. Confira o conteúdo do secret GPG_PRIVATE_KEY."
+        exit 1
+    fi
 
     gpg --batch --yes --local-user "$KEY_ID" \
         --detach-sign --armor \
