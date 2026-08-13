@@ -16,20 +16,11 @@ CACHE_DIR="$PWD/cache"
 
 GLIBC_LOADER="$PREFIX/glibc/lib/ld-linux-aarch64.so.1"
 
-# Em CI (GitHub Actions) o build não roda dentro de um Termux de verdade,
-# então não existe glibc instalado localmente — mas isso não é necessário
-# pra build: patchelf apenas grava a STRING do caminho do interpreter no
-# ELF, não precisa que o arquivo exista na máquina que está compilando.
-# Esse binário só precisa existir de fato no dispositivo do usuário final
-# (isso é garantido pela dependência "glibc" no control do pacote e
-# verificado de novo no postinst, na hora da instalação).
 SKIP_GLIBC_CHECK="${SKIP_GLIBC_CHECK:-0}"
 if [ -n "${CI:-}" ]; then
     SKIP_GLIBC_CHECK=1
 fi
 
-# Resolve o binário do Python: Termux normalmente expõe "python", mas
-# runners de CI (Ubuntu) geralmente só têm "python3".
 PYTHON_BIN="python"
 if ! command -v python >/dev/null 2>&1; then
     PYTHON_BIN="python3"
@@ -260,9 +251,7 @@ done < <(find "$JAVA_DIR/bin" -maxdepth 1 -type f -executable -print0)
 
 echo "[+] Todos os interpreters estão corretos."
 
-echo "[+] Criando wrappers (não vão para /usr/bin diretamente — serão"
-echo "    registrados via update-alternatives no postinst, para não"
-echo "    conflitar com os symlinks do openjdk-21/17)..."
+echo "[+] Criando wrappers..."
 
 create_wrapper() {
     local name="$1"
@@ -314,8 +303,6 @@ if [ -z "${LAUNCHER_NAMES[*]:-}" ]; then
     exit 1
 fi
 
-# "java" precisa ser o mestre (master) do update-alternatives; os demais
-# entram como --slave. Garante que "java" exista e o coloca na frente.
 MASTER_NAME="java"
 HAS_JAVA=0
 SLAVE_NAMES=()
@@ -348,17 +335,13 @@ Description: $PKG_DESCRIPTION
  Eclipse Temurin OpenJDK 8 running through the Termux glibc environment.
 EOF
 
-echo "[+] Gerando comando update-alternatives (mesmo padrão do openjdk-21)..."
+echo "[+] Gerando comando update-alternatives..."
 
-# Monta as linhas --slave dinamicamente, uma por wrapper (exceto "java",
-# que é o master). Cada slave aponta /usr/bin/NOME -> wrapper-bin/NOME.
 ALT_SLAVES=""
 for n in "${SLAVE_NAMES[@]}"; do
     ALT_SLAVES+="      --slave \"\$PREFIX/bin/$n\" \"$n\" \"\$JAVA_HOME/wrapper-bin/$n\" \\"$'\n'
 done
 
-# Slave extra: java-profile, que gerencia o profile.d/java.sh — é isso
-# que corrige o JAVA_HOME quando o usuário troca de JDK.
 ALT_SLAVES+="      --slave \"\$PREFIX/etc/profile.d/java.sh\" \"java-profile\" \"\$JAVA_HOME/etc/profile.d/java.sh\""
 
 {
@@ -411,9 +394,6 @@ fi
 
 echo "[+] Registrando Java 8 no update-alternatives (prioridade 50)..."
 
-# Prioridade 50: fica abaixo do 21/17 (60), então NÃO vira o padrão
-# automaticamente. O usuário escolhe com:
-#   update-alternatives --config java
 "\$PREFIX/bin/update-alternatives" \\
     --install "\$PREFIX/bin/java" "java" "\$JAVA_HOME/wrapper-bin/java" 50 \\
 $ALT_SLAVES

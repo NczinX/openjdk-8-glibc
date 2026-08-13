@@ -10,9 +10,6 @@ permissions:
   contents: write
 
 env:
-  # Nome do projeto no Cloudflare Pages (crie o projeto uma vez no dashboard
-  # da Cloudflare antes de usar este workflow — o action só faz deploy nele,
-  # não cria o projeto do zero).
   CLOUDFLARE_PROJECT_NAME: openjdk-8-glibc
 
 jobs:
@@ -43,9 +40,6 @@ jobs:
           echo "Pacote gerado: $DEB_FILE"
           ./scripts/make-repo.sh "$DEB_FILE"
         env:
-          # Se os secrets abaixo existirem, o repositório sai assinado
-          # (InRelease + Release.gpg). Se não existirem, sai sem assinatura
-          # e quem instalar precisa usar [trusted=yes] no sources.list.
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Publicar no Cloudflare Pages

@@ -1,24 +1,4 @@
 #!/usr/bin/env bash
-# Monta um repositório apt (formato Termux/Debian) a partir de um ou mais
-# arquivos .deb, pronto para ser publicado como site estático (ex: Cloudflare
-# Pages, GitHub Pages, etc).
-#
-# Uso:
-#   make-repo.sh <arquivo1.deb> [arquivo2.deb ...]
-#
-# Variáveis de ambiente:
-#   OUT_DIR      diretório de saída (default: ./dist-repo)
-#   DISTRO       nome da "suite" apt (default: stable)
-#   COMPONENT    componente apt (default: main)
-#   ARCH         arquitetura (default: aarch64, padrão Termux)
-#   ORIGIN       campo Origin do Release (default: openjdk-8-glibc)
-#   LABEL        campo Label do Release (default: mesmo valor de ORIGIN)
-#
-# Assinatura GPG (opcional, mas recomendada para produção):
-#   Se a variável GPG_PRIVATE_KEY estiver definida (conteúdo da chave
-#   privada armada, ASCII), o Release é assinado e um InRelease/Release.gpg
-#   são gerados. Sem isso, o repositório fica "não assinado" e quem for
-#   usar precisa adicionar a fonte com "[trusted=yes]".
 
 set -euo pipefail
 
@@ -71,9 +51,6 @@ done
 
 echo "[+] Gerando Packages..."
 
-# dpkg-scanpackages precisa rodar com CWD no diretório raiz do repo, pra
-# que o campo "Filename:" fique relativo (ex: pool/main/o/foo/foo.deb),
-# do jeito que o apt espera.
 (
     cd "$OUT_DIR"
     dpkg-scanpackages --arch "$ARCH" "pool/$COMPONENT" /dev/null \
